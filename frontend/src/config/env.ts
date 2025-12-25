@@ -1,7 +1,8 @@
 /** Backend API configuration */
-export const API_BASE_URL = __DEV__
-  ? "http://10.0.0.202:8000"  // Development
-  : "http://10.0.0.202:8000";  // Production - update with your backend URL
+// export const API_BASE_URL = __DEV__
+//   ? "http://10.0.0.202:8000"  // Development
+//   : "http://10.0.0.202:8000";  // Production - update with your backend URL
+export const API_BASE_URL = "https://receipt-lens-backend.onrender.com";
 
 export const API_ENDPOINTS = {
   AUTH: {
