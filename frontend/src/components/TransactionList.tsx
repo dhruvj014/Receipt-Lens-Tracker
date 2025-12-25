@@ -2,6 +2,7 @@
 import React from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import { Transaction } from "../types";
+import Logger from "../utils/logger";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -15,6 +16,12 @@ export const TransactionList: React.FC<TransactionListProps & { scrollEnabled?: 
   onDelete,
   scrollEnabled = true,
 }) => {
+  React.useEffect(() => {
+    if (transactions?.length > 0) {
+      Logger.debug("Rendering TransactionList", { count: transactions.length });
+    }
+  }, [transactions]);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {

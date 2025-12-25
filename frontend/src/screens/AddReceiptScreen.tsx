@@ -16,6 +16,8 @@ import { API_ENDPOINTS } from "../config/env";
 import { Receipt } from "../types";
 import { ReceiptCard } from "../components/ReceiptCard";
 import { useQueryClient } from "@tanstack/react-query";
+import { ProgressBar } from "../components/ProgressBar";
+import Logger from "../utils/logger";
 
 export const AddReceiptScreen: React.FC = () => {
   const [image, setImage] = useState<string | null>(null);
@@ -80,6 +82,8 @@ export const AddReceiptScreen: React.FC = () => {
     }
   };
 
+  const [progress, setProgress] = useState(0);
+
   const uploadReceipt = async () => {
     if (!image) {
       Alert.alert("Error", "Please select an image first");
@@ -87,6 +91,16 @@ export const AddReceiptScreen: React.FC = () => {
     }
 
     setUploading(true);
+    setProgress(0);
+
+    // Simulate OCR progress
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 0.9) return prev;
+        return prev + 0.1;
+      });
+    }, 400);
+
     try {
       // Create FormData
       const formData = new FormData();
@@ -100,28 +114,48 @@ export const AddReceiptScreen: React.FC = () => {
         type,
       } as any);
 
+      Logger.info("Uploading receipt...", { filename, uri: image, type });
+
       // Upload to backend
       const response = await apiClient.axiosInstance.post<Receipt>(
         API_ENDPOINTS.RECEIPTS.UPLOAD,
         formData,
         {
           headers: {
-            "Content-Type": "multipart/form-data",
+            // "Content-Type": "multipart/form-data", // Let Axios set this automatically with boundary
+            Accept: "application/json",
           },
+          transformRequest: (data, headers) => {
+            // React Native FormData fix
+            return data;
+          }
         }
       );
 
-      setReceipt(response.data);
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["analytics"] });
-      Alert.alert("Success", "Receipt processed successfully!");
+      clearInterval(progressInterval);
+      setProgress(1.0);
+      Logger.info("Receipt processed successfully", { id: response.data.id });
+
+      // Short delay to show 100%
+      setTimeout(() => {
+        setReceipt(response.data);
+        queryClient.invalidateQueries({ queryKey: ["transactions"] });
+        queryClient.invalidateQueries({ queryKey: ["analytics"] });
+        setUploading(false);
+        Alert.alert("Success", "Receipt processed successfully!");
+      }, 500);
+
     } catch (error: any) {
-      Alert.alert(
-        "Error",
-        error.response?.data?.detail || "Failed to process receipt"
-      );
-    } finally {
+      clearInterval(progressInterval);
+      setProgress(0);
       setUploading(false);
+      const message = error.response?.data?.detail || "Failed to process receipt";
+      Logger.error("Receipt upload failed", { error: message });
+
+      Alert.alert(
+        "Processing Error",
+        message
+      );
     }
   };
 
@@ -170,9 +204,13 @@ export const AddReceiptScreen: React.FC = () => {
 
         {uploading && (
           <View style={styles.processingContainer}>
-            <ActivityIndicator size="large" color="#2e7d32" />
+            <Text style={styles.processingTitle}>Analyze Receipt</Text>
+            <ProgressBar
+              progress={progress}
+              label={progress < 1 ? "Extracting text & data..." : "Complete!"}
+            />
             <Text style={styles.processingText}>
-              Processing receipt with OCR...
+              This may take a few seconds depending on the image clarity.
             </Text>
           </View>
         )}
@@ -270,12 +308,27 @@ const styles = StyleSheet.create({
   },
   processingContainer: {
     alignItems: "center",
-    padding: 32,
+    padding: 24,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    marginTop: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  processingTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12
   },
   processingText: {
     marginTop: 16,
     fontSize: 14,
-    color: "#666",
+    color: "#888",
+    textAlign: 'center'
   },
   receiptContainer: {
     marginTop: 16,

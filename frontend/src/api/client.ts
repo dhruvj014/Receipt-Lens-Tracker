@@ -2,6 +2,7 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../config/env";
+import Logger from "../utils/logger";
 
 const TOKEN_KEY = "@receiptlens:access_token";
 
@@ -11,6 +12,7 @@ class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: API_BASE_URL,
+      timeout: 10000, // 10 seconds timeout
       headers: {
         "Content-Type": "application/json",
       },
@@ -19,6 +21,7 @@ class ApiClient {
     // Request interceptor to add auth token
     this.client.interceptors.request.use(
       async (config) => {
+        Logger.debug(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
         const token = await AsyncStorage.getItem(TOKEN_KEY);
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
@@ -26,16 +29,26 @@ class ApiClient {
         return config;
       },
       (error) => {
+        Logger.error("API Request Error", error);
         return Promise.reject(error);
       }
     );
 
     // Response interceptor for error handling
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        Logger.debug(`API Response: ${response.status} ${response.config.url}`);
+        return response;
+      },
       async (error: AxiosError) => {
+        Logger.error(`API Error: ${error.config?.url}`, {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message
+        });
         if (error.response?.status === 401) {
           // Unauthorized - clear token and redirect to login
+          Logger.warn("Unauthorized access, clearing token");
           await AsyncStorage.removeItem(TOKEN_KEY);
         }
         return Promise.reject(error);

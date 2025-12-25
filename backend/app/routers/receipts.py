@@ -13,6 +13,9 @@ from app.ocr.tesseract_service import run_tesseract
 from app.ocr.nlp_extractor import extract_fields
 from app.services.transaction_service import create_transaction
 from app.schemas import TransactionCreate
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -54,9 +57,12 @@ async def upload_receipt(
     # Save image
     image_path = await save_receipt_image(file, current_user.id)
     full_image_path = os.path.join(settings.MEDIA_ROOT, image_path)
+    
+    logger.info(f"Receipt image saved at: {full_image_path}")
 
     try:
         # Run OCR
+        logger.info("Initializing OCR processing...")
         raw_text = run_tesseract(full_image_path)
 
         # Extract fields

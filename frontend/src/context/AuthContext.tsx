@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import apiClient from "../api/client";
+import Logger from "../utils/logger";
 
 interface AuthContextType {
     isAuthenticated: boolean | null;
@@ -17,8 +18,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     useEffect(() => {
         const checkAuth = async () => {
-            const token = await apiClient.getToken();
-            setIsAuthenticated(!!token);
+            try {
+                const token = await apiClient.getToken();
+                Logger.info("Auth Check", { hasToken: !!token });
+                setIsAuthenticated(!!token);
+            } catch (e) {
+                Logger.error("Auth Check Failed", e);
+                setIsAuthenticated(false);
+            }
         };
         checkAuth();
     }, []);

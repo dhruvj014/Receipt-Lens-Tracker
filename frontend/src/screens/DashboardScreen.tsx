@@ -14,6 +14,7 @@ import { useTransactions } from "../hooks/useTransactions";
 import { TransactionList } from "../components/TransactionList";
 import { SpendChart } from "../components/SpendChart";
 import { useLogout } from "../hooks/useAuth";
+import Logger from "../utils/logger";
 
 export const DashboardScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -26,7 +27,16 @@ export const DashboardScreen: React.FC = () => {
     isRefetching,
   } = useTransactions({ limit: 10 });
 
+  React.useEffect(() => {
+    Logger.info("Dashboard loaded", {
+      hasCurrentSpend: !!currentSpend,
+      hasMonthlySpend: !!monthlySpend,
+      transactionCount: transactions?.length
+    });
+  }, [currentSpend, monthlySpend, transactions]);
+
   const handleRefresh = () => {
+    Logger.info("Dashboard refreshing...");
     refetchSpend();
     refetchMonthly();
     refetchTransactions();

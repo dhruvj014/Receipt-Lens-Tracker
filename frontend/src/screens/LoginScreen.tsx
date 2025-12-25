@@ -17,18 +17,20 @@ export const LoginScreen: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loginMutation = useLogin();
   const registerMutation = useRegister();
 
   const handleSubmit = async () => {
+    setError(null);
     if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+      setError("Please fill in all fields");
       return;
     }
 
     if (password.length < 8) {
-      Alert.alert("Error", "Password must be at least 8 characters");
+      setError("Password must be at least 8 characters");
       return;
     }
 
@@ -37,6 +39,7 @@ export const LoginScreen: React.FC = () => {
         await registerMutation.mutateAsync({ email, password });
         Alert.alert("Success", "Account created! Please login.");
         setIsRegistering(false);
+        setPassword("");
       } else {
         await loginMutation.mutateAsync({ email, password });
       }
@@ -52,7 +55,13 @@ export const LoginScreen: React.FC = () => {
           errorMessage = error.response.data.detail;
         }
       }
-      Alert.alert("Error", errorMessage);
+
+      // Friendly messages for common errors
+      if (errorMessage.includes("Incorrect email or password")) {
+        errorMessage = "Incorrect email or password. Please try again.";
+      }
+
+      setError(errorMessage);
     }
   };
 
@@ -69,27 +78,41 @@ export const LoginScreen: React.FC = () => {
           </Text>
 
           <View style={styles.form}>
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
             <TextInput
               style={styles.input}
               placeholder="Email"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                setError(null);
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
+              placeholderTextColor="#999"
             />
 
             <TextInput
               style={styles.input}
               placeholder="Password"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                setError(null);
+              }}
               secureTextEntry
               autoCapitalize="none"
+              placeholderTextColor="#999"
             />
 
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, (loginMutation.isPending || registerMutation.isPending) && styles.buttonDisabled]}
               onPress={handleSubmit}
               disabled={loginMutation.isPending || registerMutation.isPending}
             >
@@ -104,7 +127,10 @@ export const LoginScreen: React.FC = () => {
 
             <TouchableOpacity
               style={styles.switchButton}
-              onPress={() => setIsRegistering(!isRegistering)}
+              onPress={() => {
+                setIsRegistering(!isRegistering);
+                setError(null);
+              }}
             >
               <Text style={styles.switchText}>
                 {isRegistering
@@ -174,6 +200,23 @@ const styles = StyleSheet.create({
   switchText: {
     color: "#2e7d32",
     fontSize: 14,
+    fontWeight: "600",
   },
+  errorContainer: {
+    backgroundColor: '#ffebee',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#ef5350'
+  },
+  errorText: {
+    color: '#c62828',
+    fontSize: 14,
+    textAlign: 'center'
+  },
+  buttonDisabled: {
+    opacity: 0.7
+  }
 });
 

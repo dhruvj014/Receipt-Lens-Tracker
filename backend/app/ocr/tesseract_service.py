@@ -3,6 +3,9 @@ import pytesseract
 from PIL import Image
 from app.config import settings
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def run_tesseract(image_path: str) -> str:
@@ -27,7 +30,14 @@ def run_tesseract(image_path: str) -> str:
 
     # Run OCR with optimized settings for receipts
     # Use PSM 6 (Assume a single uniform block of text) for better receipt parsing
+    logger.info(f"Starting OCR for image: {image_path}")
     custom_config = r"--oem 3 --psm 6"
-    raw_text = pytesseract.image_to_string(image, config=custom_config)
-
-    return raw_text.strip()
+    
+    try:
+        raw_text = pytesseract.image_to_string(image, config=custom_config)
+        logger.info(f"OCR completed. Extracted {len(raw_text)} characters.")
+        logger.debug(f"Raw Text Preview: {raw_text[:100]}...")
+        return raw_text.strip()
+    except Exception as e:
+        logger.error(f"OCR Failed: {e}")
+        raise e
